@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>My first three.js app</title>
+		<style>
+			body { margin: 0; }
+            canvas {
+                width: 100%;
+                height: 100%;
+
+            }
+		</style>
+	</head>
+	<body>
+		<script type="module">
+
+            import * as THREE from 'https://unpkg.com/three/build/three.module.js';
+			import { OrbitControls } from 'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js';
+            import { OBJLoader } from 'https://unpkg.com/three/examples/jsm/loaders/OBJLoader.js';
+
+			let camera, controls, scene, renderer, sphere, tileGroup, hazard;
+            let bRuinVisible;
+
+            //function will call to get the tile from API, .then() will fire 'init()' to create the 3d objects
+			getEnv()
+            .then(
+                init()
+            );
+			animate();
+
+            //function that toggles which items will be on
+            async function getEnv (){
+                console.log("fired");
+                bRuinVisible=true;
+            }
+
+
+			function init() {
+
+				scene = new THREE.Scene()
+                //its 0x + hexcode. I feel like this shouldn't be new but it is :(
+                scene.background = new THREE.Color( 0xC9D8DE ); //sets background color
+                scene.fog = new THREE.Fog( 0xffffff, 10, 50 );
+
+                //camera
+                camera = new THREE.PerspectiveCamera(
+                    75, //angle
+                    window.innerWidth / window.innerHeight, //aspect ratio
+                    0.1, //near plane
+                    1000 //far plane
+                );
+                camera.position.z = 5;
+                camera.position.y = 1.5;
+
+                //create the renderer
+                renderer = new THREE.WebGLRenderer();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                //add the renderer to the html file
+                document.body.appendChild(renderer.domElement);
+
+
+                //geom
+                const geometry = new THREE.CylinderGeometry( 5, 5, 1, 6 );
+                const material = new THREE.MeshToonMaterial( {color: 0x4A3617} );
+                const mesh = new THREE.Mesh( geometry, material );
+
+                //geom 2
+                const geometry2 = new THREE.CylinderGeometry( 5, 5, .5, 6 );
+                const material2 = new THREE.MeshToonMaterial( {color: 0xffffff} );
+                const mesh2 = new THREE.Mesh(geometry2, material2);
+                mesh2.position.y= .75
+
+                const geometry3 = new THREE.SphereGeometry( 30, 32, 32 );
+                const material3 = new THREE.MeshBasicMaterial( {color:0xD6EDFF} );
+                sphere = new THREE.Mesh( geometry3, material3 );
+                sphere.position.y=-2
+                sphere.scale.y= .01
+                scene.add( sphere );
+
+                tileGroup = new THREE.Group()
+                tileGroup.add(mesh)
+                tileGroup.add(mesh2)
+
+                if(bRuinVisible){
+                    const loader = new OBJLoader();
+
+                    loader.load(
+                        'https://github.com/mattcbarker/mattcbarker.github.io/blob/master/mts.obj', //path
+                        //called when resource is loaded
+                        function (object){
+                            tileGroup.add(object)
+                        },
+                        //calld when loading...
+                        function (xhr){
+                            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+                        },
+                        function (error) {
+                            console.log('An error has occured');
+                        }
+                    )
+                    //ruins
+                    const gRuin = new THREE.BoxGeometry( 2, 4, 2 );
+                    const mRuin = new THREE.MeshBasicMaterial( {color: 0x00ff00} );
+                    const ruin = new THREE.Mesh( gRuin, mRuin );
+                    ruin.position.y=1.5
+                    tileGroup.add(ruin)
+                }
+                
+                
+                
+                scene.add(tileGroup)
+
+				// controls
+
+				controls = new OrbitControls( camera, renderer.domElement );
+				controls.listenToKeyEvents( window ); // optional
+
+				//controls.addEventListener( 'change', render ); // call this only in static scenes (i.e., if there is no animation loop)
+
+				controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+				controls.dampingFactor = 0.05;
+
+				controls.screenSpacePanning = false;
+
+				controls.minDistance = 10;
+				controls.maxDistance = 20;
+
+				controls.maxPolarAngle = Math.PI / 2;
+
+
+				// lights
+				const dirLight1 = new THREE.DirectionalLight( 0xffffff );
+				dirLight1.position.set( 1, 1, 1 );
+				scene.add( dirLight1 );
+
+				const dirLight2 = new THREE.DirectionalLight( 0x002288 );
+				dirLight2.position.set( - 1, - 1, - 1 );
+				scene.add( dirLight2 );
+
+				const ambientLight = new THREE.AmbientLight( 0x222222 );
+				scene.add( ambientLight );
+
+
+				window.addEventListener( 'resize', onWindowResize );
+
+			}
+
+            function onWindowResize(){
+                const w = window.innerWidth;
+                const h = window.innerHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+
+            }
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+                tileGroup.rotation.y += 0.001;
+
+				controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
+				render();
+
+			}
+
+			function render() {
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+
+	</body>
+</html>
